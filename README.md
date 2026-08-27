@@ -137,4 +137,8 @@ $remote.Close()
 
 ## Licence
 
-MIT.
+MIT - see [LICENSE](LICENSE).
+
+`tools/` is vendored from
+[ZX-Next-Unite](https://github.com/jclauzel/ZX-Next-Unite) (`extra/`),
+MIT and the same author, so it travels under the same terms.
