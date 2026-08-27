@@ -1,0 +1,121 @@
+{
+    // SampleNex - build a ZX Spectrum Next app and push it to real hardware
+    // from VS Code, in one key.
+    //
+    // Ctrl+Shift+B runs "Build + Send to Next": compile with z88dk, push the
+    // .nex over ZX-Next-Unite's NextSync HTTP bridge, verify the bytes that
+    // landed, and tell the Next to run it. The number the app prints is
+    // bumped by every build, so what you see on the TV proves it is the
+    // build you just made.
+    //
+    // Prerequisites, once:
+    //   * z88dk installed (build.ps1 finds C:\z88dk, or set Z88DK_DIR).
+    //   * In ZX-Next-Unite: Settings -> "Enable NextSync HTTP bridge", and
+    //     the NextSync tab's Remote Explorer listen server started.
+    //   * On the Next: the autoexec loop (run "Next: deploy autoexec loop"
+    //     below once) and a NextSync Listener dialled at the PC.
+    //   * Send-ToNext.cfg in this folder: set bridge_ip to the PC running
+    //     ZX-Next-Unite (NOT the Next).
+    //
+    // "command": "powershell" is Windows PowerShell 5.1 - fine everywhere on
+    // Windows. Switch to "pwsh" on macOS/Linux (or if you prefer PS 7).
+    "version": "2.0.0",
+    "tasks": [
+        {
+            // Compile only. Bumps build_number.txt and regenerates
+            // src/build_number.h, so every build prints a new number.
+            "label": "Build",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/build.ps1"
+            ],
+            "group": "build",
+            "problemMatcher": {
+                // zcc reports as  src\main.c:12:5: error: ...
+                "owner": "z88dk",
+                "fileLocation": ["relative", "${workspaceFolder}"],
+                "pattern": {
+                    "regexp": "^(.*?):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+                    "file": 1, "line": 2, "column": 3, "severity": 4, "message": 5
+                }
+            }
+        },
+        {
+            // Push the .nex already built, verify it, and run it.
+            "label": "Send to Next",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/tools/PS-Send-ToNext.ps1",
+                "-Config", "${workspaceFolder}/Send-ToNext.cfg"
+            ],
+            // Exit codes are the report (0 = verified on the Next, 4 = the
+            // bytes differ), so no matcher - VS Code fails the task on any
+            // non-zero code.
+            "problemMatcher": []
+        },
+        {
+            // THE ONE: Ctrl+Shift+B. dependsOrder "sequence" is load-bearing
+            // - without it VS Code runs both at once and the push races the
+            // compile, sending the PREVIOUS build.
+            "label": "Build + Send to Next",
+            "dependsOrder": "sequence",
+            "dependsOn": ["Build", "Send to Next"],
+            "group": { "kind": "build", "isDefault": true },
+            "problemMatcher": []
+        },
+        {
+            // One-time: install the Next-side loop that receives pushes.
+            // Idempotent - safe to re-run.
+            "label": "Next: deploy autoexec loop",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/tools/PS-Send-ToNext.ps1",
+                "-Config", "${workspaceFolder}/Send-ToNext.cfg",
+                "-autoexec", "Deploy"
+            ],
+            "problemMatcher": []
+        },
+        {
+            // Re-arm a parked loop (autoexec_.bas -> autoexec.bas).
+            "label": "Next: autoexec On",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/tools/PS-Send-ToNext.ps1",
+                "-Config", "${workspaceFolder}/Send-ToNext.cfg",
+                "-autoexec", "On"
+            ],
+            "problemMatcher": []
+        },
+        {
+            // Park the loop: the Next boots normally until switched On.
+            "label": "Next: autoexec Off",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/tools/PS-Send-ToNext.ps1",
+                "-Config", "${workspaceFolder}/Send-ToNext.cfg",
+                "-autoexec", "Off"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Clean",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", "${workspaceFolder}/build.ps1", "-Clean"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}

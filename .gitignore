@@ -1,0 +1,12 @@
+# z88dk build artifacts
+SampleNex.nex
+SampleNex.map
+SampleNex.lis
+SampleNex
+zcc_opt.def
+*.o
+*.bin
+
+# GENERATED from build_number.txt on every build - the .txt is the source
+# of truth and IS tracked, so a fresh clone builds with the right number.
+src/build_number.h
