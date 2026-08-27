@@ -31,8 +31,9 @@ With everything set up (below), in VS Code press **`Ctrl+Shift+B`**:
    back *off the Next*, so an HTTP 200 alone is never mistaken for success.
 3. `/forceexit` tells the Next to leave the Listener; the autoexec loop
    picks up the pushed file and runs it.
-4. The Next prints `Hello Dev Builders <n>!`. Press **ENTER** and it drops
-   back into the Listener, ready for the next push.
+4. The Next prints `Hello Dev Builders <n>!`. Press **ENTER**: the app
+   **soft-resets** the machine, which comes back up into the autoexec
+   loop and re-arms the Listener, ready for the next push.
 
 Edit, `Ctrl+Shift+B`, watch. That is the pitch.
 
@@ -40,7 +41,7 @@ Edit, `Ctrl+Shift+B`, watch. That is the pitch.
 
 | Path | What |
 |---|---|
-| `src/main.c` | the app — a `printf` and a pause |
+| `src/main.c` | the app — a `printf`, a pause, then a soft reset |
 | `src/build_number.h` | **generated** each build (git-ignored) |
 | `build_number.txt` | the counter, **tracked** so a clone continues the sequence |
 | `build.ps1` | find z88dk → bump → generate → `zcc` → report |
@@ -76,6 +77,24 @@ card. `Next: autoexec Off` / `On` park and re-arm it later.
 The Next-side setup is documented in full in ZX-Next-Unite's
 [`extra/README.md`](https://github.com/jclauzel/ZX-Next-Unite/blob/main/extra/README.md)
 ("Push-to-hardware from VS Code").
+
+### Why it ends with a soft reset
+
+Returning from `main` on this target means z88dk's "return to basic"
+exit (`crt_on_exit = 0x30002`). On a machine sitting in the autoexec
+loop that is the wrong ending: BASIC resumes the loop, the loop finds
+the pushed file and `.nexload`s it **again**. On the first hardware test
+that ran the app three times over, output piling down the screen, until
+it fell over into garbage.
+
+The loop is built around ZX Next Remote's habit of soft-resetting when
+it exits — the reset *is* the "go to the top of the loop". So this app
+ends the same way, via the Next's reset register
+(`ZXN_WRITE_REG(REG_RESET, RR_SOFT_RESET)`), and the cycle closes
+properly. It also means no `CLS` is needed on entry: the reset clears
+the screen. (The old `printf("%c", 12)` was what printed a stray `?` at
+the top of every line — this console driver has no form-feed and just
+echoes the unknown character.)
 
 ## Building by hand
 
