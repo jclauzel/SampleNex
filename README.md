@@ -16,7 +16,23 @@ seconds ago — not a stale copy left on the SD card.
 
 Built with [z88dk](https://z88dk.org) (`+zxn`, `.nex` output). Pushed with
 [ZX-Next-Unite](https://github.com/jclauzel/ZX-Next-Unite)'s NextSync HTTP
-bridge, driven by the `ZxNextRemote` PowerShell layer vendored in `tools/`.
+bridge, driven by its `ZxNextRemote` PowerShell layer.
+
+> ### ⚠️ `tools/` is a vendored snapshot
+>
+> The PowerShell layer in [`tools/`](tools/) is a **copy**, taken from
+> ZX-Next-Unite so this repo works standalone. It does **not** update
+> itself, and it will fall behind.
+>
+> **ZX-Next-Unite is the upstream and the source of truth** — refresh from
+> it whenever you hit a bug or want a new feature:
+>
+> * [`extra/`](https://github.com/jclauzel/ZX-Next-Unite/tree/main/extra) — the
+>   `ZxNextRemote` module, `PS-Send-ToNext.ps1` and `autoexec.bas`
+> * [`PowerShell/`](https://github.com/jclauzel/ZX-Next-Unite/tree/main/PowerShell) — the
+>   guide, and the VS Code task sample these tasks came from
+>
+> Copy commands are in [*Refreshing the tools*](#refreshing-the-tools).
 
 ---
 
@@ -47,7 +63,7 @@ Edit, `Ctrl+Shift+B`, watch. That is the pitch.
 | `build.ps1` | find z88dk → bump → generate → `zcc` → report |
 | `.vscode/tasks.json` | Build / Send / Build+Send / autoexec / Clean |
 | `Send-ToNext.cfg` | where the bridge is, what to push, where it lands |
-| `tools/` | the vendored push layer (see *Refreshing the tools* below) |
+| `tools/` | **vendored snapshot** of the push layer — update it from upstream, see *[Refreshing the tools](#refreshing-the-tools)* |
 
 ## Setup, once
 
@@ -121,21 +137,45 @@ pushing a stale `.nex`.
 
 ## Refreshing the tools
 
-`tools/` is a **vendored copy** from ZX-Next-Unite's `extra/`, so this repo
-is self-contained. Three things travel together — the script imports the
-module relative to itself, and `-autoexec:Deploy` looks for `autoexec.bas`
-beside it:
+**`tools/` is a vendored snapshot, and keeping it current is recommended.**
+It is a copy taken from ZX-Next-Unite at the time this repo was written —
+nothing here updates it, so bug fixes and new features land upstream first
+and reach you only when you refresh. Upstream is:
+
+| Upstream | Holds |
+|---|---|
+| [`ZX-Next-Unite/extra/`](https://github.com/jclauzel/ZX-Next-Unite/tree/main/extra) | the `ZxNextRemote/` module, `PS-Send-ToNext.ps1`, `autoexec.bas` — **the three files vendored here** |
+| [`ZX-Next-Unite/PowerShell/`](https://github.com/jclauzel/ZX-Next-Unite/tree/main/PowerShell) | `PowerShellHelperClass.md` (the full guide) and `vscode-sample/tasks.json`, which this repo's `.vscode/tasks.json` is adapted from |
+
+### How to refresh
+
+Clone or pull ZX-Next-Unite, then copy the **three** pieces — they travel
+together, because the script imports the module relative to itself and
+`-autoexec:Deploy` looks for `autoexec.bas` beside it:
 
 ```powershell
+# once: git clone https://github.com/jclauzel/ZX-Next-Unite.git
+# then: git -C C:\path\to\ZX-Next-Unite pull
+
 $U = 'C:\path\to\ZX-Next-Unite\extra'
 Copy-Item "$U\PS-Send-ToNext.ps1" tools\ -Force
 Copy-Item "$U\ZxNextRemote"       tools\ -Recurse -Force
 Copy-Item "$U\autoexec.bas"       tools\ -Force
+
+git status tools\        # anything listed = you just picked up changes
 ```
 
-The module's own reference is `Get-Help about_ZxNextRemote` (after
-`Import-Module tools\ZxNextRemote\ZxNextRemote.psd1`), and the full guide
-is ZX-Next-Unite's `PowerShell/PowerShellHelperClass.md`.
+A refresh that reports nothing means the snapshot was already current.
+After one that *does* change something, re-run a push to be sure your
+setup still behaves — `.\build.ps1` then the **Send to Next** task.
+
+### Reference
+
+* `Get-Help about_ZxNextRemote` — the class and method reference, after
+  `Import-Module tools\ZxNextRemote\ZxNextRemote.psd1`.
+* [`PowerShellHelperClass.md`](https://github.com/jclauzel/ZX-Next-Unite/blob/main/PowerShell/PowerShellHelperClass.md)
+  — the full guide: install/uninstall, the error reference, the
+  bearer-token pattern and the VS Code integration.
 
 ## Driving the Next from your own scripts
 
@@ -158,6 +198,5 @@ $remote.Close()
 
 MIT - see [LICENSE](LICENSE).
 
-`tools/` is vendored from
-[ZX-Next-Unite](https://github.com/jclauzel/ZX-Next-Unite) (`extra/`),
-MIT and the same author, so it travels under the same terms.
+`tools/` is vendored from [ZX-Next-Unite](https://github.com/jclauzel/ZX-Next-Unite/tree/main/extra)
+(`extra/`), MIT and the same author, so it travels under the same terms.
