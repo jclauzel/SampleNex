@@ -188,9 +188,9 @@ $bearer = ''                                   # '' = unprotected bridge
 $remote = New-ZxNextRemote -IpAddress 127.0.0.1 -Port 80 -Token $bearer
 $s      = $remote.ManageSession()              # the active Next
 
-$s.Ls('/dev') | Format-Table
-$s.Put('SampleNex.nex', '/dev/incoming.nex')
-$s.Verify('SampleNex.nex', '/dev/incoming.nex')
+$s.Ls('/home') | Format-Table
+$s.Put('SampleNex.nex', '/home/incoming.nex')
+$s.Verify('SampleNex.nex', '/home/incoming.nex')
 $remote.Close()
 ```
 
