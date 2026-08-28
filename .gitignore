@@ -10,3 +10,8 @@ zcc_opt.def
 # GENERATED from build_number.txt on every build - the .txt is the source
 # of truth and IS tracked, so a fresh clone builds with the right number.
 src/build_number.h
+
+# Written by PS-Send-ToNext.ps1 the first time it runs without one.
+# The template that ships with the demo is Send-ToNext.cfg at the root;
+# this copy is per-machine and would only confuse a reader.
+tools/Send-ToNext.cfg
