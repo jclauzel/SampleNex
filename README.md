@@ -43,8 +43,12 @@ With everything set up (below), in VS Code press **`Ctrl+Shift+B`**:
 1. `build.ps1` bumps `build_number.txt`, regenerates `src/build_number.h`,
    and compiles `SampleNex.nex`.
 2. `tools/PS-Send-ToNext.ps1` waits for a Next on the bridge, uploads the
-   `.nex`, and **verifies** it — comparing size and a 16-bit checksum read
-   back *off the Next*, so an HTTP 200 alone is never mistaken for success.
+   `.nex`, and **verifies** it — asking the Next for the **CRC-32 of the
+   file it holds** (computed *on the Next*; 8 hex digits come back, not the
+   file) and comparing it with the CRC-32 of the bytes pushed, so an HTTP
+   200 alone is never mistaken for success. A Listener older than ZX Next
+   Remote 1.0.8 / `.sync5` 5.9.2 does not know the crc op; the script then
+   says so and falls back to the size + 16-bit checksum read-back.
 3. `/forceexit` tells the Next to leave the Listener; the autoexec loop
    picks up the pushed file and runs it.
 4. The Next prints `Hello Dev Builders <n>!`. Press **ENTER**: the app
@@ -87,8 +91,13 @@ same machine. Set `token` only if Unite's *Require bearer token* is on.
 **4. The Next** — put a NextSync **Listener** on it (ZX Next Remote, or a
 `.sync5 -listen` dot) dialled at the PC, then run the VS Code task
 **`Next: deploy autoexec loop`** once. That installs the receiving loop
-into `c:/nextzxos/autoexec.bas`, checksum-verified, without pulling the SD
-card. `Next: autoexec Off` / `On` park and re-arm it later.
+into `c:/nextzxos/autoexec.bas`, verified the same way, without pulling the
+SD card. The loop's transfer folder defaults to **`/home`** — the
+`remote_path` in `Send-ToNext.cfg` matches it — and the loop is
+configurable on the Next itself (hold **B** while it boots; the settings
+live in `c:/nextzxos/autoexec.cfg`). The two halves must name the same
+folder: a PC pushing into one while the Next watches another fails
+silently. `Next: autoexec Off` / `On` park and re-arm the loop later.
 
 The Next-side setup is documented in full in ZX-Next-Unite's
 [`extra/README.md`](https://github.com/jclauzel/ZX-Next-Unite/blob/main/extra/README.md)
@@ -169,6 +178,16 @@ A refresh that reports nothing means the snapshot was already current.
 After one that *does* change something, re-run a push to be sure your
 setup still behaves — `.\build.ps1` then the **Send to Next** task.
 
+**Refreshing the loop already on the card.** `Next: deploy autoexec loop`
+never overwrites an existing `autoexec.bas`, so a card set up from an
+earlier snapshot keeps running the loop it has. This repo's first
+snapshot (before 28 August 2026) shipped a loop hard-wired to `/dev`; the
+current one defaults to `/home` and is configurable on the Next. To move
+such a card over, run **`Next: autoexec Off`** (parks the old loop) and
+then **`Next: deploy autoexec loop`** (sends the new one and removes the
+parked copy) — or keep the old loop and set
+`remote_path = /dev/incoming.nex` in `Send-ToNext.cfg` again.
+
 ### Reference
 
 * `Get-Help about_ZxNextRemote` — the class and method reference, after
@@ -190,7 +209,8 @@ $s      = $remote.ManageSession()              # the active Next
 
 $s.Ls('/home') | Format-Table
 $s.Put('SampleNex.nex', '/home/incoming.nex')
-$s.Verify('SampleNex.nex', '/home/incoming.nex')
+$s.Verify('SampleNex.nex', '/home/incoming.nex')   # CRC-32 on the Next; /sum fallback
+$s.Crc('/home/incoming.nex').Crc32                 # the Next's digest, 8 hex digits
 $remote.Close()
 ```
 
